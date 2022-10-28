@@ -1,0 +1,9 @@
+{
+	"string": "hello world",
+	"number": 3.141,
+	"object": {
+		"anotherString": "helloWorld",
+		"list": [ "instanceOne", "instanceTwo" ]
+	},
+	"bool": true
+}
