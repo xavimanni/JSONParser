@@ -7,8 +7,9 @@
 typedef struct JSONObject JSONObject;
 typedef struct JSONValue JSONValue;
 
-#define JSON_STRING 1
+
 #define JSON_OBJECT 0
+#define JSON_STRING 1
 #define JSON_NUMBER 2
 #define JSON_BOOL 3
 
@@ -21,10 +22,7 @@ struct JSONObject {
 struct  JSONValue {
 	char* key;
 	int value_type;
-	char* stringValue;
-	double numberValue;
-	bool boolValue;
-	JSONObject* objectValue;
+	void* value;
 };
 
 
@@ -104,17 +102,17 @@ void print_json(JSONObject* obj, int nest) {
 		printf("%s: ", val->key);
 		switch (val->value_type) {
 		case JSON_STRING:
-			printf(val->stringValue);
+			printf((char*) (val->value));
 			break;
 		case JSON_BOOL:
-			printf(val->boolValue ? "TRUE" : "FALSE");
+			printf(*(bool*)(val->value) ? "TRUE" : "FALSE");
 			break;
 		case JSON_OBJECT:
 			printf("\n");
-			print_json(val->objectValue, nest + 1);
+			print_json((JSONObject*)(val->value), nest + 1);
 			break;
 		case JSON_NUMBER:
-			printf("%f", val->numberValue);
+			printf("%f", *(double*)(val->value));
 			break;
 		default:
 			break;
@@ -230,25 +228,31 @@ JSONObject* json_parse(char* string) {
 				memcpy(val->key, keyBuf, keySize);
 				if (valueBuf[0] == '{' || valueBuf[0] == '[') {
 					JSONObject* nested = json_parse(valueBuf);
-					val->objectValue = nested;
+					val->value = (void*)nested;
 					val->value_type = JSON_OBJECT;
 				}
 				else if (valueBuf[0] == '"') {
 					char* result = malloc(strlen(valueBuf) - 2);
 					memcpy(result, valueBuf + 1, strlen(valueBuf + 1) - 1);
 					result[strlen(valueBuf) - 2] = 0;
-					val->stringValue = result;
+					val->value = (void*)result;
 					val->value_type = JSON_STRING;
 				}
 				else if (isdigit(valueBuf[0])) {
-					val->numberValue = atof(valueBuf);
+					double num = atof(valueBuf);
+					double* ptr = malloc(sizeof(double));
+					memcpy(ptr, &num, sizeof(double));
+					val->value = (void*)(ptr);
 					val->value_type = JSON_NUMBER;
 				}
 				else {
 					char firstFour[5];
 					memcpy(firstFour, valueBuf, 4);
 					firstFour[4] = 0;
-					val->boolValue = strcmp(firstFour, "true") == 0;
+					bool result = strcmp(firstFour, "true") == 0;
+					bool* ptr = malloc(sizeof(bool));
+					memcpy(ptr, &result, sizeof(bool));
+					val->value = (void*)ptr;
 					val->value_type = JSON_BOOL;
 				}
 
