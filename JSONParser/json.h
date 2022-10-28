@@ -245,7 +245,10 @@ JSONObject* json_parse(char* string) {
 					val->value_type = JSON_NUMBER;
 				}
 				else {
-					val->boolValue = strcmp(valueBuf, "true") == 0;
+					char firstFour[5];
+					memcpy(firstFour, valueBuf, 4);
+					firstFour[4] = 0;
+					val->boolValue = strcmp(firstFour, "true") == 0;
 					val->value_type = JSON_BOOL;
 				}
 

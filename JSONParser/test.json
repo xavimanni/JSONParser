@@ -5,5 +5,8 @@
 		"anotherString": "helloWorld",
 		"list": [ "instanceOne", "instanceTwo" ]
 	},
-	"bool": true
+	"bool":   false
+
+
+
 }
