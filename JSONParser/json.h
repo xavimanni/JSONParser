@@ -1,6 +1,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 #pragma warning(disable : 4996)
 
@@ -91,9 +92,10 @@ int countKeys(char* string) {
 }
 
 JSONObject* json_parse(char* string);
-void print_json(JSONObject* obj, int nest);
 
-void print_json(JSONObject* obj, int nest) {
+void json_print(JSONObject* obj, int nest);
+
+void json_print(JSONObject* obj, int nest) {
 	for (int i = 0; i < obj->length; i++) {
 		JSONValue* val = obj->values[i];
 		for (int j = 0; j < nest; j++) {
@@ -109,7 +111,7 @@ void print_json(JSONObject* obj, int nest) {
 			break;
 		case JSON_OBJECT:
 			printf("\n");
-			print_json((JSONObject*)(val->value), nest + 1);
+			json_print((JSONObject*)(val->value), nest + 1);
 			break;
 		case JSON_NUMBER:
 			printf("%f", *(double*)(val->value));
@@ -148,6 +150,7 @@ JSONObject* json_parse(char* string) {
 
 
 	for (int i = 0; string[i] != 0; i++) {
+		if (pairIndex >= count) break;
 		/*
 		read first '{', write to a variable that remembers whether we have entered the main object
 		read until a " is found. toggle inKey mode.
@@ -213,7 +216,7 @@ JSONObject* json_parse(char* string) {
 			if ((currentChar == ',' && bracketCount == 0 && !inString) || bracketCount == -1 || (string[i - 1] == '"' && !inString && bracketCount == 0)) {
 
 
-				valueBuf = malloc(i - valueStartPos + 1);
+				valueBuf = (char*)malloc(i - valueStartPos + 1);
 				valueSize = i - valueStartPos + 1;
 				memcpy(valueBuf, &string[valueStartPos], i - valueStartPos);
 				valueBuf[i - valueStartPos] = 0;
@@ -223,7 +226,7 @@ JSONObject* json_parse(char* string) {
 				keyStartPos = 0;
 				valueStartPos = 0;
 
-				JSONValue* val = malloc(sizeof(JSONValue));
+				JSONValue* val = (JSONValue*)malloc(sizeof(JSONValue));
 				val->key = malloc(keySize);
 				memcpy(val->key, keyBuf, keySize);
 				if (valueBuf[0] == '{' || valueBuf[0] == '[') {
@@ -232,7 +235,7 @@ JSONObject* json_parse(char* string) {
 					val->value_type = JSON_OBJECT;
 				}
 				else if (valueBuf[0] == '"') {
-					char* result = malloc(strlen(valueBuf) - 2);
+					char* result = malloc(strlen(valueBuf) - 2 + 1);
 					memcpy(result, valueBuf + 1, strlen(valueBuf + 1) - 1);
 					result[strlen(valueBuf) - 2] = 0;
 					val->value = (void*)result;
@@ -246,10 +249,7 @@ JSONObject* json_parse(char* string) {
 					val->value_type = JSON_NUMBER;
 				}
 				else {
-					char firstFour[5];
-					memcpy(firstFour, valueBuf, 4);
-					firstFour[4] = 0;
-					bool result = strcmp(firstFour, "true") == 0;
+					bool result = valueBuf[0] == 't'; //nastyy way to check if it is "true" or "false", cant use strcmp because sometimes "true" will be "true\r\n" or something
 					bool* ptr = malloc(sizeof(bool));
 					memcpy(ptr, &result, sizeof(bool));
 					val->value = (void*)ptr;
@@ -261,8 +261,8 @@ JSONObject* json_parse(char* string) {
 
 
 
-				free(valueBuf);
-				free(keyBuf);
+				if(valueBuf != NULL) free(valueBuf);
+				if (keyBuf != NULL) free(keyBuf);
 			}
 
 
@@ -278,4 +278,48 @@ JSONObject* json_parse(char* string) {
 	return obj;
 
 
+}
+
+JSONValue* json_get_value(JSONObject* obj, char* key) {
+	for (int i = 0; i < obj->length; i++) {
+		if (strcmp(obj->values[i]->key, key) == 0) {
+			return obj->values[i];
+		}
+	}
+}
+
+char* json_get_string(JSONObject* obj, char* key) {
+	for (int i = 0; i < obj->length; i++) {
+		if (strcmp(obj->values[i]->key, key) == 0) {
+			if (obj->values[i]->value_type != JSON_STRING) return NULL;
+			return (char*)obj->values[i]->value;
+		}
+	}
+}
+
+bool json_get_bool(JSONObject* obj, char* key) {
+	for (int i = 0; i < obj->length; i++) {
+		if (strcmp(obj->values[i]->key, key) == 0) {
+			if (obj->values[i]->value_type != JSON_BOOL) return false;
+			return *(bool *) (obj->values[i]->value);
+		}
+	}
+}
+
+JSONObject* json_get_object(JSONObject* obj, char* key) {
+	for (int i = 0; i < obj->length; i++) {
+		if (strcmp(obj->values[i]->key, key) == 0) {
+			if (obj->values[i]->value_type != JSON_OBJECT) return NULL;
+			return (JSONObject*)(obj->values[i]->value);
+		}
+	}
+}
+
+double json_get_number(JSONObject* obj, char* key) {
+	for (int i = 0; i < obj->length; i++) {
+		if (strcmp(obj->values[i]->key, key) == 0) {
+			if (obj->values[i]->value_type != JSON_NUMBER) return 0;
+			return *(double*)(obj->values[i]->value);
+		}
+	}
 }

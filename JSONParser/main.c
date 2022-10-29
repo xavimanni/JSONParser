@@ -15,7 +15,7 @@ int main() {
 	fclose(f);
 	
 	JSONObject* json = json_parse(string);
-	print_json(json, 1);
+	printf(json_get_string(json_get_object(json, "object"), "anotherString"));
 
-
+	return 0;
 }
